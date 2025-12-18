@@ -47,9 +47,19 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
     
+    // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
-    } else {
+    } 
+    // Allow all Vercel preview deployments (for frontend)
+    else if (origin.includes('.vercel.app') && origin.includes('denn-project')) {
+      callback(null, true);
+    }
+    // Allow localhost for development
+    else if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      callback(null, true);
+    }
+    else {
       callback(new Error('Not allowed by CORS'));
     }
   },
