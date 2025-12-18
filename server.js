@@ -33,12 +33,36 @@ mongoose.connect(MONGODB_URI)
     console.log('⚠️  Continuing without database connection (email functionality will still work)');
   });
 
-// CORS configuration
+// Middleware - CORS with explicit configuration
+// Allow all Vercel preview deployments and local development
 const corsOptions = {
   origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman, etc.)
     if (!origin) return callback(null, true);
-    if (origin.includes('.vercel.app')) return callback(null, true);
-    if (origin.includes('localhost')) return callback(null, true);
+    
+    // Allow all Vercel domains (preview deployments)
+    if (origin.includes('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Allow specific origins
+    const allowedOrigins = [
+      'https://denn-project-j81qhqrg1-rathoryash7s-projects.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // For any other origin, allow it (for development/testing)
+    // In production, you might want to reject unknown origins
     callback(null, true);
   },
   credentials: true,
@@ -50,9 +74,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // THIS LINE IS CRITICAL - handles preflight requests!
 
-// Middleware
+// CRITICAL: Explicitly handle OPTIONS requests (preflight) for all routes
+// MUST use the same corsOptions to ensure consistent CORS headers
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -194,11 +220,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Export app for Vercel serverless functions
+
+// Vercel serverless function handler
 export default app;
 
-// Only start server if not in Vercel environment
-if (!process.env.VERCEL) {
+// For local development
+if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
