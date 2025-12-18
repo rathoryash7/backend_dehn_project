@@ -42,28 +42,48 @@ const allowedOrigins = [
   'http://localhost:3000'                                               // Alternative dev port
 ];
 
+// CORS configuration - Allow all origins for now to debug
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
     
+    console.log('CORS: Request from origin:', origin);
+    
+    // Temporarily allow ALL origins for debugging
+    // TODO: Restrict this after confirming connection works
+    console.log('CORS: Allowing origin (debugging mode)');
+    callback(null, true);
+    
+    /* Original restrictive CORS (uncomment after testing):
     // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('CORS: Origin allowed (in allowed list)');
       callback(null, true);
     } 
     // Allow all Vercel preview deployments (for frontend)
-    else if (origin.includes('.vercel.app') && origin.includes('denn-project')) {
+    else if (origin.includes('.vercel.app')) {
+      console.log('CORS: Origin allowed (Vercel deployment)');
       callback(null, true);
     }
     // Allow localhost for development
     else if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      console.log('CORS: Origin allowed (localhost)');
       callback(null, true);
     }
     else {
+      console.log('CORS: Origin BLOCKED:', origin);
+      console.log('CORS: Allowed origins:', allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
+    */
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Middleware
@@ -178,12 +198,23 @@ app.use('/api/products', productRoutes);
 app.get('/', (req, res) => {
   res.json({
     message: 'Backend API is running',
+    timestamp: new Date().toISOString(),
     endpoints: {
       health: '/api/health',
       auth: '/api/auth',
       products: '/api/products',
       sendPdfEmail: '/api/send-pdf-email'
     }
+  });
+});
+
+// Test endpoint for CORS debugging
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Backend is accessible',
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin || 'no origin header'
   });
 });
 
