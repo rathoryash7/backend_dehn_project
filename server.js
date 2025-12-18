@@ -34,40 +34,11 @@ mongoose.connect(MONGODB_URI)
   });
 
 // CORS configuration
-const allowedOrigins = [
-  'https://denn-project.vercel.app',                                    // Main frontend Vercel URL
-  'https://denn-project-28ovsb4i7-rathoryash7s-projects.vercel.app',   // Vercel deployment URL
-  'https://backend-dehn-project-lcqehwnmx-rathoryash7s-projects.vercel.app', // Backend Vercel URL
-  'http://localhost:5173',                                              // Vite dev server
-  'http://localhost:3000'                                               // Alternative dev port
-];
-
-// CORS configuration - Properly handles preflight OPTIONS requests
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, Postman, etc.)
-    if (!origin) {
-      console.log('CORS: Allowing request with no origin');
-      return callback(null, true);
-    }
-    
-    console.log('CORS: Request from origin:', origin);
-    
-    // Allow all Vercel domains (including preview deployments)
-    if (origin.includes('.vercel.app')) {
-      console.log('CORS: Origin allowed (Vercel deployment)');
-      return callback(null, true);
-    }
-    
-    // Allow localhost for development
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      console.log('CORS: Origin allowed (localhost)');
-      return callback(null, true);
-    }
-    
-    // Allow all origins (for development/testing)
-    // TODO: Restrict this in production if needed
-    console.log('CORS: Allowing origin');
+    if (!origin) return callback(null, true);
+    if (origin.includes('.vercel.app')) return callback(null, true);
+    if (origin.includes('localhost')) return callback(null, true);
     callback(null, true);
   },
   credentials: true,
@@ -76,11 +47,10 @@ app.use(cors({
   exposedHeaders: ['Content-Type', 'Authorization'],
   preflightContinue: false,
   optionsSuccessStatus: 204
-}));
+};
 
-// CRITICAL: Explicitly handle OPTIONS requests (preflight) for all routes
-// This must be added AFTER the CORS middleware but BEFORE your routes
-app.options('*', cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // THIS LINE IS CRITICAL - handles preflight requests!
 
 // Middleware
 app.use(express.json());
