@@ -42,10 +42,10 @@ const allowedOrigins = [
   'http://localhost:3000'                                               // Alternative dev port
 ];
 
-// CORS configuration - Allow all origins for now to debug
+// CORS configuration - Properly handles preflight OPTIONS requests
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+    // Allow requests with no origin (mobile apps, curl, Postman, etc.)
     if (!origin) {
       console.log('CORS: Allowing request with no origin');
       return callback(null, true);
@@ -53,38 +53,34 @@ app.use(cors({
     
     console.log('CORS: Request from origin:', origin);
     
-    // Temporarily allow ALL origins for debugging
-    // TODO: Restrict this after confirming connection works
-    console.log('CORS: Allowing origin (debugging mode)');
-    callback(null, true);
-    
-    /* Original restrictive CORS (uncomment after testing):
-    // Check if origin is in allowed list
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log('CORS: Origin allowed (in allowed list)');
-      callback(null, true);
-    } 
-    // Allow all Vercel preview deployments (for frontend)
-    else if (origin.includes('.vercel.app')) {
+    // Allow all Vercel domains (including preview deployments)
+    if (origin.includes('.vercel.app')) {
       console.log('CORS: Origin allowed (Vercel deployment)');
-      callback(null, true);
+      return callback(null, true);
     }
+    
     // Allow localhost for development
-    else if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
       console.log('CORS: Origin allowed (localhost)');
-      callback(null, true);
+      return callback(null, true);
     }
-    else {
-      console.log('CORS: Origin BLOCKED:', origin);
-      console.log('CORS: Allowed origins:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
-    }
-    */
+    
+    // Allow all origins (for development/testing)
+    // TODO: Restrict this in production if needed
+    console.log('CORS: Allowing origin');
+    callback(null, true);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// CRITICAL: Explicitly handle OPTIONS requests (preflight) for all routes
+// This must be added AFTER the CORS middleware but BEFORE your routes
+app.options('*', cors());
 
 // Middleware
 app.use(express.json());
