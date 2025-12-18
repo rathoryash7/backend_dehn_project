@@ -17,7 +17,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+// Use /tmp for uploads in Vercel (serverless), otherwise use uploads/
+const uploadDest = process.env.VERCEL ? '/tmp' : 'uploads/';
+const upload = multer({ dest: uploadDest });
 
 // Connect to MongoDB
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dehn-project';
@@ -35,6 +37,7 @@ mongoose.connect(MONGODB_URI)
 const allowedOrigins = [
   'https://denn-project.vercel.app',                                    // Main frontend Vercel URL
   'https://denn-project-28ovsb4i7-rathoryash7s-projects.vercel.app',   // Vercel deployment URL
+  'https://backend-dehn-project-lcqehwnmx-rathoryash7s-projects.vercel.app', // Backend Vercel URL
   'http://localhost:5173',                                              // Vite dev server
   'http://localhost:3000'                                               // Alternative dev port
 ];
@@ -57,8 +60,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync('uploads')) {
+// Create uploads directory if it doesn't exist (only for local development)
+if (!process.env.VERCEL && !fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
 
@@ -161,6 +164,19 @@ app.post('/api/send-pdf-email', upload.single('pdf'), async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Backend API is running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      products: '/api/products',
+      sendPdfEmail: '/api/send-pdf-email'
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
@@ -171,8 +187,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health`);
-});
+// Export app for Vercel serverless functions
+export default app;
+
+// Only start server if not in Vercel environment
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/api/health`);
+  });
+}
