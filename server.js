@@ -31,8 +31,29 @@ mongoose.connect(MONGODB_URI)
     console.log('⚠️  Continuing without database connection (email functionality will still work)');
   });
 
+// CORS configuration
+const allowedOrigins = [
+  'https://denn-project.vercel.app',                                    // Main frontend Vercel URL
+  'https://denn-project-28ovsb4i7-rathoryash7s-projects.vercel.app',   // Vercel deployment URL
+  'http://localhost:5173',                                              // Vite dev server
+  'http://localhost:3000'                                               // Alternative dev port
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
